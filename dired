@@ -1,0 +1,27 @@
+#!/bin/sh
+
+out=`ls -laH`
+line=`printf "%s" "$out" | sed -n 3p`
+beforeDir=${line%..}
+amount=`expr ${#beforeDir} + 1`
+
+first="$PWD"
+
+files=`ls -laH | sed 1d`
+selection=`printf "%s\n%s" "$first" "$files" | cmenu`
+
+case "$selection" in
+	d*) isDir='yes';;
+esac
+
+target="`printf '%s' "$selection" | awk '{ print $9 }'`"
+
+[ "$target" = "" ] && exec printf "%s" "$PWD";
+
+[ "$isDir" = 'yes' ] && {
+	cd $target || notify-send "cannot change dir!" ;
+	exec dired
+}
+
+opener $target
+exec dired
