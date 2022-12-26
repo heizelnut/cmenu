@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-FILE *logfile;
-
 #define OOMF_IMPL
 #define BUF_IMPL
 #include "buf.h"
@@ -14,8 +12,7 @@ FILE *logfile;
 
 static buf_t input = BUF_INIT;
 static buf_t frame = BUF_INIT;
-static ibuf_t newlines = IBUF_INIT;
-//static ibuf_t marked = IBUF_INIT;
+static ibuf_t newlines = BUF_INIT;
 
 static int keyboard, display, in, out;    /* fd */
 
@@ -23,9 +20,11 @@ static int raw_mode_flag = 0;
 static struct termios T;
 static pair_t wsize = PAIR_ZERO;
 
-static int hovered_file_line = 1;
+static unsigned int title_rows = 0;
+static unsigned int hovered_row = 1;
 static int quit = 0;
-static int offset = 0;
+static unsigned int offset = 0;
+
 
 int
 min(int a, int b) { return (a < b) ? a : b; }
@@ -36,7 +35,6 @@ max(int a, int b) { return (a > b) ? a : b; }
 void
 finalize()
 {
-	fprintf(logfile, "amount of newlines: %zu\n", newlines.len);
 	write(display, "\x1b[?25h", 6);
 	disable_raw_mode(&T, display, &raw_mode_flag);
 	close(keyboard);
@@ -73,27 +71,18 @@ paint_frame(int dpy, buf_t input, buf_t frame, ibuf_t newlines)
 	buf_empty(&frame);
 	buf_append(&frame, "\x1b[?25l", 6);
 	buf_append(&frame, "\x1b[H", 3);
-	if (newlines.len < (unsigned) wsize.y) {
-		int istartline = 0;
-		for (int y = 1; y < wsize.y; y++) {
-			if (y <= (long) newlines.len) {
-				if (y == hovered_file_line)
-					buf_append(&frame, "\e[4m", 4);
-				if (y == 1)
-					istartline = 0;
-				else
-					istartline = newlines.heap[y - 2 + offset] + 1;
-				int slen = newlines.heap[y - 1 + offset] - istartline;
-				buf_append(&frame, &input.heap[istartline], slen);
-			} else {
-				buf_append(&frame, "~", 1);
-			}
+	for (unsigned int row = 1 + offset; row < offset + wsize.y; row++) {
+		if (row <= title_rows) buf_append(&frame, "\e[1m", 4);
+		if (row == hovered_row) buf_append(&frame, "\e[4m", 4);
+		if (row - 1 >= newlines.len) {
+			buf_append(&frame, "~\r\n", 3);
+		} else {
+			int istart = (row > 1) ? (newlines.heap[row - 2] + 1) : 0;
+			int slen = newlines.heap[row - 1] - istart;
+			buf_append(&frame, &input.heap[istart], slen);
 			buf_append(&frame, "\e[0m", 4);
 			buf_append(&frame, "\r\n", 2);
 		}
-	} else {
-		fprintf(stderr, "%s:%d: windows is too small\r\n", __FILE__, __LINE__);
-		exit(1);
 	}
 	write(dpy, frame.heap, frame.len);
 }
@@ -101,12 +90,12 @@ paint_frame(int dpy, buf_t input, buf_t frame, ibuf_t newlines)
 void
 print_line(buf_t input, ibuf_t newlines, unsigned long which, int ofd)
 {
-	unsigned long istartline = 0;
+	unsigned long istart = 0;
 	if (which < 1 || which > newlines.len) return;
-	if (which == 1) istartline = 0;
-	else istartline = newlines.heap[which - 2] + 1;
-	int slen = newlines.heap[which - 1] - istartline;
-	write(ofd, &input.heap[istartline], slen);
+	if (which == 1) istart = 0;
+	else istart = newlines.heap[which - 2] + 1;
+	int slen = newlines.heap[which - 1] - istart;
+	write(ofd, &input.heap[istart], slen);
 }
 
 void
@@ -116,6 +105,7 @@ update_wsize(int sig)
 		fprintf(stderr, "%s:%d: cannot get window size\r\n", __FILE__, __LINE__);
 		exit(1);
 	}
+	offset = 0;
 	if (sig == SIGWINCH) paint_frame(display, input, frame, newlines);
 }
 
@@ -139,16 +129,18 @@ process_keys(int kbd)
 	switch(k) {
 		case 'j':
 		case 'n':
-			hovered_file_line += 1 * (hovered_file_line < (long) newlines.len);
-			//if (hovered_file_line == wsize.y + offset) offset++;
+			hovered_row += 1 * (hovered_row < (long) newlines.len);
+			if (hovered_row - offset == wsize.y)
+				offset += 1 * (offset <= newlines.len - wsize.y);
 		break;
 		case 'k':
 		case 'N':
-			hovered_file_line += -1 * (hovered_file_line > 1);
-			//if (hovered_file_line == 1 + offset && offset > 0) offset--;
+			hovered_row += -1 * (hovered_row > 1 + title_rows);
+			if (hovered_row - offset == title_rows)
+				offset -= 1 * (offset > 0);
 		break;
 		case '\r':
-			print_line(input, newlines, hovered_file_line, out);
+			print_line(input, newlines, hovered_row, out);
 		case '\x1b':
 		case 'q':
 			quit = 1;
@@ -163,7 +155,23 @@ main(int argc, char *argv[])
 	(void) argc;
 	(void) argv;
 
-	logfile = fopen("cmenu.log", "w");
+	int opt;
+	while ((opt = getopt(argc, argv, "t:d:")) != -1) {
+		switch (opt) {
+		case 't':
+			title_rows = max(0, strtol(optarg, NULL, 10));
+		break;
+		case 'd':
+			hovered_row = max(0, strtol(optarg, NULL, 10));
+		break;
+		default:
+			fprintf(stderr, "Usage: %s [-d n] [-t m]\n", argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	hovered_row = (hovered_row <= title_rows) ? 1 + title_rows : hovered_row;
+
 	atexit(finalize);
 
 	init_streams(&keyboard, &display, &in, &out);
@@ -184,7 +192,6 @@ main(int argc, char *argv[])
 	}
 	
 	fclose(in_stream);
-	fprintf(logfile, "old newlines: %zu\r\n", newlines.len);
 	ibuf_scan(&input, '\n', &newlines);
 
 	while (!quit) {

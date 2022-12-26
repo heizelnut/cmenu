@@ -18,10 +18,14 @@ $(TARG): $(OBJS)
 
 clean:
 	rm *.o
+	rm *.core
 	rm $(TARG)
 
 install: $(TARG)
 	install $(TARG) $(PREFIX)/$(TARG)
+
+install-dired:
+	install dired $(PREFIX)/dired
 
 uninstall: install
 	rm $(PREFIX)/$(TARG)

@@ -2,8 +2,8 @@
 #define PAIR_H
 
 typedef struct {
-	int x;
-	int y;
+	unsigned int x;
+	unsigned int y;
 } pair_t;
 
 #define PAIR_ZERO (pair_t){0,0}
