@@ -15,8 +15,9 @@ target="`printf '%s' "$selection" | awk '{ print $9 }'`"
 
 [ "$isDir" = 'yes' ] && {
 	cd $target || notify-send "cannot change dir!" ;
-	exec dired
+	exec dired $@
 }
 
-opener $target
-exec dired
+[ "$1" = "" ] && $TERMINAL -e opener "$target" 2>/dev/null 1>/dev/null &
+[ "$1" = "-i" ] && opener "$target"
+exec dired $@

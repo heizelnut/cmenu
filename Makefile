@@ -20,9 +20,9 @@ $(TARG): $(OBJS)
 	$(CC) -o $(TARG) $(OBJS)
 
 clean:
+	rm $(TARG)
 	rm *.o
 	rm *.core
-	rm $(TARG)
 
 install: $(TARG)
 	mkdir -p $(MANPREFIX)
@@ -30,9 +30,9 @@ install: $(TARG)
 	install $(TARG) $(BINPREFIX)/$(TARG)
 
 install-dired:
-	install dired $(PREFIX)/dired
+	install dired $(BINPREFIX)/dired
 
 uninstall: install
-	rm $(PREFIX)/$(TARG)
+	rm $(BINPREFIX)/$(TARG)
 
 .PHONY: clean
