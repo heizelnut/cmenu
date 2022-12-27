@@ -1,0 +1,38 @@
+cmenu
+=====
+interactive menu filter to put in program pipelines
+
+install
+-------
+ $ make
+ $ make install                         # installs for user
+ # PREFIX=/usr/local/bin make install   # requires sudo/doas
+
+why
+---
+I was always fascinated by the `dired` feature in emacs, but I couldn't find
+any standalone program which could be run from the terminal without an emacs
+daemon running in the background and with vi bindings.
+Then I realized I could just build a simpler and more general purpose program,
+following the unix philosophy and chaining more programs together to implement
+`dired` in POSIX shell.
+
+what does it do
+---------------
+It acts pretty much like fzf and dmenu, but it's brutally simple.
+
+examples
+--------
+`dired` - directory navigator
+
+license
+-------
+Most of the code to control the terminal has been borrowed and readjusted from
+antirez/kilo, which is licensed under the same license (BSD 2-Clause).
+
+Grazie Salvatore, mo devo offrirti una birra.
+
+inspiration
+-----------
+GNU Emacs - dired mode
+antirez/kilo - a small C terminal editor in 1000 LOC
