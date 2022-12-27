@@ -25,6 +25,7 @@ static unsigned int hovered_row = 1;
 static int quit = 0;
 static unsigned int offset = 0;
 
+static int exit_code = EXIT_FAILURE;
 
 int
 min(int a, int b) { return (a < b) ? a : b; }
@@ -128,21 +129,19 @@ process_keys(int kbd)
 
 	switch(k) {
 		case 'j':
-		case 'n':
 			hovered_row += 1 * (hovered_row < (long) newlines.len);
 			if (hovered_row - offset == wsize.y)
 				offset += 1 * (offset <= newlines.len - wsize.y);
 		break;
 		case 'k':
-		case 'N':
 			hovered_row += -1 * (hovered_row > 1 + title_rows);
 			if (hovered_row - offset == title_rows)
 				offset -= 1 * (offset > 0);
 		break;
 		case '\r':
 			print_line(input, newlines, hovered_row, out);
+			exit_code = EXIT_SUCCESS;
 		case '\x1b':
-		case 'q':
 			quit = 1;
 		break;
 	}
@@ -199,5 +198,5 @@ main(int argc, char *argv[])
 		process_keys(keyboard);
 	}
 
-	return 0;
+	return exit_code;
 }
