@@ -1,0 +1,32 @@
+.TH CMENU 1 cmenu
+.SH NAME
+cmenu \- command line menu
+.SH SYNOPSIS
+.B cmenu
+.RB [ \-t
+.IR titlerows ]
+.RB [ \-d
+.IR defaultrow ]
+.SH DESCRIPTION
+.B cmenu
+is a command line menu program, which reads a list of newline\-separated items from
+stdin.  When the user selects an item and presses Return, their choice is printed
+to stdout and cmenu terminates.
+.SH OPTIONS
+.TP
+.BI \-t " titlerows"
+cmenu treats the first
+.B titlerows
+number of lines as an immutable title and doesn't make them selectable.
+.TP
+.BI \-d " defaultrow"
+cmenu puts the cursor over this row at startup.
+.SH USAGE
+cmenu is completely controlled by the keyboard.  You can go up and down by pressing
+j and k (vim bindings).
+.TP
+.B Return
+prints the selected item to stdout and exits, returning success.
+.TP
+.B Escape
+exit without selecting an item, returning failure.

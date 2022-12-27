@@ -5,8 +5,10 @@ interactive menu filter to put in program pipelines
 install
 -------
  $ make
- $ make install                         # installs for user
- # PREFIX=/usr/local/bin make install   # requires sudo/doas
+ # make install                         # requires sudo/doas
+ $ make install PREFIX=~/.local         # installs for user
+
+for other actions see the Makefile.
 
 why
 ---
