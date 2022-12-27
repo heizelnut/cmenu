@@ -61,7 +61,7 @@ buf_append(buf_t *dst, char *src, unsigned long slen)
 	if (dst->heap == NULL) {
 		dst->cap = 16;
 		dst->len = 0;
-		char *tmp = (char*) malloc(sizeof(dst->cap * dst->heap[0]));
+		char *tmp = (char*) malloc(dst->cap * sizeof(dst->heap[0]));
 		OOMF(tmp);
 		dst->heap = tmp;
 	}
