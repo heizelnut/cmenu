@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
@@ -75,11 +76,12 @@ paint_frame(int dpy, buf_t input, buf_t frame, ibuf_t newlines)
 	for (unsigned int row = 1 + offset; row < offset + wsize.y; row++) {
 		if (row <= title_rows) buf_append(&frame, "\e[1m", 4);
 		if (row == hovered_row) buf_append(&frame, "\e[4m", 4);
-		if (row - 1 >= newlines.len) {
+		if (row > 1 + newlines.len) {
 			buf_append(&frame, "~\r\n", 3);
 		} else {
-			int istart = (row > 1) ? (newlines.heap[row - 2] + 1) : 0;
-			int slen = newlines.heap[row - 1] - istart;
+			int iend = (row-1 < newlines.len) ? newlines.heap[row-1] : input.len;
+			int istart = (row > 1) ? newlines.heap[row-2] + 1 : 0;
+			int slen = iend - istart;
 			buf_append(&frame, &input.heap[istart], slen);
 			buf_append(&frame, "\e[0m", 4);
 			buf_append(&frame, "\r\n", 2);
@@ -91,11 +93,9 @@ paint_frame(int dpy, buf_t input, buf_t frame, ibuf_t newlines)
 void
 print_line(buf_t input, ibuf_t newlines, unsigned long which, int ofd)
 {
-	unsigned long istart = 0;
-	if (which < 1 || which > newlines.len) return;
-	if (which == 1) istart = 0;
-	else istart = newlines.heap[which - 2] + 1;
-	int slen = newlines.heap[which - 1] - istart;
+	int iend = (which-1 < newlines.len) ? newlines.heap[which-1] : input.len;
+	int istart = (which > 1) ? newlines.heap[which-2] + 1 : 0;
+	int slen = iend - istart;
 	write(ofd, &input.heap[istart], slen);
 }
 
@@ -129,13 +129,13 @@ process_keys(int kbd)
 
 	switch(k) {
 		case 'j':
-			hovered_row += 1 * (hovered_row < (long) newlines.len);
+			hovered_row += 1 * (hovered_row <= (long) newlines.len);
 			if (hovered_row - offset == wsize.y)
-				offset += 1 * (offset <= newlines.len - wsize.y);
+				offset += 1 * (offset <= 1 + newlines.len - wsize.y);
 		break;
 		case 'k':
 			hovered_row += -1 * (hovered_row > 1 + title_rows);
-			if (hovered_row - offset == title_rows)
+			if (hovered_row - title_rows == offset)
 				offset -= 1 * (offset > 0);
 		break;
 		case '\r':
@@ -184,12 +184,21 @@ main(int argc, char *argv[])
 
 	char chunk[1000];
 	FILE *in_stream = fdopen(in, "r");
+
+	/* trim newlines at start */
+	int first;
+	while ((first = fgetc(in_stream)) == '\n');
+	ungetc(first, in_stream);
+
 	while (1) {
-		fgets(chunk, 1000, in_stream);
+		if (NULL != fgets(chunk, 1000, in_stream))
+			buf_append(&input, chunk, strlen(chunk));
 		if (feof(in_stream)) break;
-		buf_append(&input, chunk, strlen(chunk));
 	}
-	
+
+	/* trim newlines at the end */
+	while (input.heap[input.len-1] == '\n') input.len--;
+
 	fclose(in_stream);
 	ibuf_scan(&input, '\n', &newlines);
 
