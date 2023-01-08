@@ -5,7 +5,7 @@ CFLAGS=-I. -W -Wall -Wextra $(PROD)
 
 TARG=cmenu
 DEPS=term.h buf.h
-OBJS=rawm.o ctrl.o $(TARG).o
+OBJS=rawm.o ctrl.o buf.o $(TARG).o
 
 MAN=cmenu.1
 
