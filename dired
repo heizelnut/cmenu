@@ -2,7 +2,7 @@
 
 first="$PWD"
 
-files=`ls -lapH | sed 1d`
+files=`ls -laphL | sed 1d`
 selection=`printf "%s\n%s" "$first" "$files" | cmenu -t 1`
 
 case "$selection" in
